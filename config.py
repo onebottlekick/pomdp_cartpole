@@ -34,6 +34,7 @@ num_layers = config['network']['num_layers']
 
 ########################Environment Configuration########################
 version = config['env']['version']
+goal_mean_100_reward = config['env']['goal_mean_100_reward']
 mdp = config['env']['mdp']
 render = config['env']['render']
 #########################################################################
@@ -43,7 +44,6 @@ render = config['env']['render']
 gamma = config['agent']['gamma']
 max_minutes = config['agent']['max_minutes']
 max_episodes = config['agent']['max_episodes']
-goal_mean_100_reward = config['agent']['goal_mean_100_reward']
 #########################################################################
 
 

@@ -13,13 +13,14 @@ class Q_net(nn.Module):
         self.V = nn.Linear(dim, 1)
         self.A = nn.Linear(dim, n_actions)
         
+        self.memory = nn.Parameter(torch.zeros(1, memory_len, dim))
+        
         device = 'cpu'
         if torch.cuda.is_available():
             device = torch.device("cuda")
         self.device = device
         self.to(device)
         
-        self.memory = nn.Parameter(torch.zeros(1, memory_len, dim))
     
     def _format(self, state):
         x = state

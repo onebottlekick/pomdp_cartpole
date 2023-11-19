@@ -42,14 +42,12 @@ class DuelingDDQN():
         b, l, d = states.shape
 
         a_q_sp, hidden_state = self.online_model(next_states, hidden_state)
-        # argmax_a_q_sp = self.online_model(next_states).max(2)[1].view(b, l, -1)
         argmax_a_q_sp = a_q_sp.max(2)[1].view(b, l, -1)
         q_sp, _ = self.target_model(next_states)
         q_sp = q_sp.detach()
 
         max_a_q_sp = q_sp.gather(2, argmax_a_q_sp)
         target_q_sa = rewards + (self.gamma * max_a_q_sp * (1 - is_terminals))
-        # q_sa = self.online_model(states).gather(2, actions)
         q_sa, _ = self.online_model(states)
         q_sa = q_sa.gather(2, actions)
         

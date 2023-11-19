@@ -17,8 +17,18 @@ class Q_net(nn.Module):
         if torch.cuda.is_available():
             device = torch.device("cuda")
         self.device = device
+        
+        self.apply(self._init_weights)
         self.to(device)
         
+    def _init_weights(self, m):
+        if isinstance(m, nn.Linear):
+            m.weight.data.normal_(0, 0.02)
+            if m.bias is not None:
+                m.bias.data.zero_()
+        elif isinstance(m, nn.LayerNorm):
+            m.weight.data.fill_(1.0)
+            m.bias.data.zero_()
     
     def _format(self, state):
         x = state

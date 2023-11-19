@@ -37,17 +37,23 @@ class DuelingDDQN():
         self.update_target_every_steps = update_target_every_steps
         self.tau = tau
 
-    def optimize_model(self, experiences):
+    def optimize_model(self, experiences, hidden_state=None):
         states, actions, rewards, next_states, is_terminals = experiences
         batch_size = len(is_terminals)
         b, l, d = states.shape
 
-        argmax_a_q_sp = self.online_model(next_states).max(2)[1].view(b, l, -1)
-        q_sp = self.target_model(next_states).detach()
+        a_q_sp, hidden_state = self.online_model(next_states, hidden_state)
+        # argmax_a_q_sp = self.online_model(next_states).max(2)[1].view(b, l, -1)
+        argmax_a_q_sp = a_q_sp.max(2)[1].view(b, l, -1)
+        q_sp, _ = self.target_model(next_states)
+        q_sp = q_sp.detach()
 
         max_a_q_sp = q_sp.gather(2, argmax_a_q_sp)
         target_q_sa = rewards + (self.gamma * max_a_q_sp * (1 - is_terminals))
-        q_sa = self.online_model(states).gather(2, actions)
+        # q_sa = self.online_model(states).gather(2, actions)
+        q_sa, _ = self.online_model(states)
+        q_sa = q_sa.gather(2, actions)
+        
 
         td_error = q_sa - target_q_sa
         value_loss = td_error.pow(2).mul(0.5).mean()
@@ -56,6 +62,8 @@ class DuelingDDQN():
         torch.nn.utils.clip_grad_norm_(self.online_model.parameters(), 
                                        self.max_gradient_norm)
         self.value_optimizer.step()
+        
+        return hidden_state
 
     def interaction_step(self, state, env):
         action = self.training_strategy.select_action(self.online_model, state)
@@ -122,6 +130,7 @@ class DuelingDDQN():
             self.episode_timestep.append(0.0)
             self.episode_exploration.append(0.0)
 
+            hidden_state = None
             for step in count():
                 state, is_terminal = self.interaction_step(state, env)
                 
@@ -129,7 +138,7 @@ class DuelingDDQN():
                 if self.episode_buffer.available() and len(self.replay_buffer) > min_samples:
                     experiences = self.episode_buffer.sample()
                     experiences = make_epi_seq(experiences, batch_size=self.episode_buffer.batch_size, device=self.target_model.device)
-                    self.optimize_model(experiences)
+                    hidden_state = self.optimize_model(experiences, hidden_state)
                 
                 if np.sum(self.episode_timestep) % self.update_target_every_steps == 0:
                     self.update_network()

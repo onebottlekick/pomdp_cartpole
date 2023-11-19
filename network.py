@@ -12,9 +12,7 @@ class Q_net(nn.Module):
         self.transformer = BlockRecurrentTransformer(dim, num_layers, memory_len=memory_len)
         self.V = nn.Linear(dim, 1)
         self.A = nn.Linear(dim, n_actions)
-        
-        self.memory = nn.Parameter(torch.zeros(1, memory_len, dim))
-        
+                
         device = 'cpu'
         if torch.cuda.is_available():
             device = torch.device("cuda")
@@ -29,14 +27,13 @@ class Q_net(nn.Module):
             x = x.unsqueeze(0)
         return x
     
-    def forward(self, x):
+    def forward(self, x, hidden_state=None):
         x = self._format(x)
         if x.ndim == 2:
             x = x.unsqueeze(0)
         x = self.embed(x)
-        x, hidden_state = self.transformer(x, self.memory)
-        self.memory.data.copy_ = hidden_state.data
+        x, hidden_state = self.transformer(x, hidden_state)
         advantage = self.A(x)
         value = self.V(x)
         Q = value + advantage - advantage.mean(-1, keepdim=True).expand_as(advantage)
-        return Q
+        return Q, hidden_state

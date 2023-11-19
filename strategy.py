@@ -8,7 +8,9 @@ class GreedyStrategy():
 
     def select_action(self, model, state):
         with torch.no_grad():
-            q_values = model(state).cpu().detach().data.numpy().squeeze()
+            # q_values = model(state).cpu().detach().data.numpy().squeeze()
+            q_values, _ = model(state)
+            q_values = q_values.cpu().detach().data.numpy().squeeze()
             return np.argmax(q_values)
         
         
@@ -20,7 +22,9 @@ class EGreedyStrategy():
     def select_action(self, model, state):
         self.exploratory_action_taken = False
         with torch.no_grad():
-            q_values = model(state).cpu().detach().data.numpy().squeeze()
+            # q_values = model(state).cpu().detach().data.numpy().squeeze()
+            q_values, _ = model(state)
+            q_values = q_values.cpu().detach().data.numpy().squeeze()
 
         if np.random.rand() > self.epsilon:
             action = np.argmax(q_values)
@@ -49,7 +53,9 @@ class EGreedyExpStrategy():
     def select_action(self, model, state):
         self.exploratory_action_taken = False
         with torch.no_grad():
-            q_values = model(state).detach().cpu().data.numpy().squeeze()
+            # q_values = model(state).detach().cpu().data.numpy().squeeze()
+            q_values, _ = model(state)
+            q_values = q_values.cpu().detach().data.numpy().squeeze()
 
         if np.random.rand() > self.epsilon:
             action = np.argmax(q_values)

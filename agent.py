@@ -39,7 +39,6 @@ class DuelingDDQN():
 
     def optimize_model(self, experiences, hidden_state=None):
         states, actions, rewards, next_states, is_terminals = experiences
-        batch_size = len(is_terminals)
         b, l, d = states.shape
 
         a_q_sp, hidden_state = self.online_model(next_states, hidden_state)
@@ -65,8 +64,8 @@ class DuelingDDQN():
         
         return hidden_state
 
-    def interaction_step(self, state, env):
-        action = self.training_strategy.select_action(self.online_model, state)
+    def interaction_step(self, state, env, hidden_state=None):
+        action, hidden_state = self.training_strategy.select_action(self.online_model, state, hidden_state)
         new_state, reward, terminated, truncated, info = env.step(action)
         is_failure = terminated
         is_terminal = terminated or truncated
@@ -75,7 +74,7 @@ class DuelingDDQN():
         self.episode_reward[-1] += reward
         self.episode_timestep[-1] += 1
         self.episode_exploration[-1] += int(self.training_strategy.exploratory_action_taken)
-        return new_state, is_terminal
+        return new_state, is_terminal, hidden_state
     
     def update_network(self, tau=None):
         tau = self.tau if tau is None else tau
@@ -131,8 +130,9 @@ class DuelingDDQN():
             self.episode_exploration.append(0.0)
 
             hidden_state = None
+            step_hidden_state = None
             for step in count():
-                state, is_terminal = self.interaction_step(state, env)
+                state, is_terminal, step_hidden_state = self.interaction_step(state, env, step_hidden_state)
                 
                 min_samples = (self.replay_buffer.batch_size + 1) * (self.episode_buffer.batch_size + 1) * self.n_warmup_batches
                 if self.episode_buffer.available() and len(self.replay_buffer) > min_samples:
@@ -219,8 +219,9 @@ class DuelingDDQN():
             s, _ = eval_env.reset()
             d = False
             rs.append(0)
+            hidden_state = None
             for _ in count():
-                a = self.evaluation_strategy.select_action(eval_policy_model, s)
+                a, hidden_state = self.evaluation_strategy.select_action(eval_policy_model, s, hidden_state)
                 s, r, terminated, truncated, _ = eval_env.step(a)
                 d = terminated or truncated
                 rs[-1] += r

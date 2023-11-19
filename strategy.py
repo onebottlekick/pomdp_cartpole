@@ -6,12 +6,12 @@ class GreedyStrategy():
     def __init__(self):
         self.exploratory_action_taken = False
 
-    def select_action(self, model, state):
+    def select_action(self, model, state, hidden_state):
         with torch.no_grad():
             # q_values = model(state).cpu().detach().data.numpy().squeeze()
-            q_values, _ = model(state)
+            q_values, hidden_state = model(state, hidden_state)
             q_values = q_values.cpu().detach().data.numpy().squeeze()
-            return np.argmax(q_values)
+            return np.argmax(q_values), hidden_state
         
         
 class EGreedyStrategy():
@@ -19,11 +19,11 @@ class EGreedyStrategy():
         self.epsilon = epsilon
         self.exploratory_action_taken = None
 
-    def select_action(self, model, state):
+    def select_action(self, model, state, hidden_state=None):
         self.exploratory_action_taken = False
         with torch.no_grad():
             # q_values = model(state).cpu().detach().data.numpy().squeeze()
-            q_values, _ = model(state)
+            q_values, hidden_state = model(state, hidden_state)
             q_values = q_values.cpu().detach().data.numpy().squeeze()
 
         if np.random.rand() > self.epsilon:
@@ -32,7 +32,7 @@ class EGreedyStrategy():
             action = np.random.randint(len(q_values))
 
         self.exploratory_action_taken = action != np.argmax(q_values)
-        return action
+        return action, hidden_state
     
 class EGreedyExpStrategy():
     def __init__(self, init_epsilon=1.0, min_epsilon=0.1, decay_steps=20000):
@@ -50,11 +50,10 @@ class EGreedyExpStrategy():
         self.t += 1
         return self.epsilon
 
-    def select_action(self, model, state):
+    def select_action(self, model, state, hidden_state=None):
         self.exploratory_action_taken = False
         with torch.no_grad():
-            # q_values = model(state).detach().cpu().data.numpy().squeeze()
-            q_values, _ = model(state)
+            q_values, hidden_state = model(state, hidden_state)
             q_values = q_values.cpu().detach().data.numpy().squeeze()
 
         if np.random.rand() > self.epsilon:
@@ -64,4 +63,4 @@ class EGreedyExpStrategy():
 
         self._epsilon_update()
         self.exploratory_action_taken = action != np.argmax(q_values)
-        return action
+        return action, hidden_state

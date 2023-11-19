@@ -29,6 +29,7 @@ tau = config['train']['tau']
 seq_len = config['network']['seq_len']
 hidden_size = config['network']['in_dim']
 num_layers = config['network']['num_layers']
+memory_len = config['network']['memory_len']
 #########################################################################
 
 

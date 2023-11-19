@@ -14,7 +14,7 @@ from utils import (BEEP, get_make_env_fn, optimizer_dict,
 exp_results = []
 best_agent, best_eval_score = None, float('-inf')
 for seed in seeds:
-    value_model_fn = lambda nS, nA: Q_net(memory_len=512, dim=hidden_size, num_layers=num_layers, n_observations=nS, n_actions=nA)
+    value_model_fn = lambda nS, nA: Q_net(memory_len=memory_len, dim=hidden_size, num_layers=num_layers, n_observations=nS, n_actions=nA)
     value_optimizer_fn = lambda net, lr: optimizer_dict[optimizer](net.parameters(), lr=lr)
     value_optimizer_lr = 0.0005
     max_gradient_norm = float('inf')

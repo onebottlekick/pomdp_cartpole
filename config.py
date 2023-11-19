@@ -22,6 +22,7 @@ max_gradient_norm = float(config['train']['max_gradient_norm'])
 n_warmup_batches = config['train']['n_warmup_batches']
 update_target_every_steps = config['train']['update_target_every_steps']
 tau = config['train']['tau']
+random_sample = config['train']['random_sample']
 #########################################################################
 
 

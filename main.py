@@ -24,8 +24,8 @@ for seed in seeds:
                                                       decay_steps=decay_steps)
     evaluation_strategy_fn = lambda: GreedyStrategy()
 
-    replay_buffer_fn = lambda: ReplayBuffer(seq_len=seq_len)
-    episode_buffer_fn = lambda: EpisodeBuffer(batch_size=batch_size)
+    replay_buffer_fn = lambda: ReplayBuffer(seq_len=seq_len, random_sample=random_sample)
+    episode_buffer_fn = lambda: EpisodeBuffer(batch_size=batch_size, random_sample=random_sample)
 
     agent = DuelingDDQN(replay_buffer_fn,
                 episode_buffer_fn,

@@ -53,7 +53,7 @@ class ReplayBuffer:
         if self.random_sample:
             return random.sample(self.memory, self.batch_size)
         else:
-            return self.memory[-batch_size:]
+            return list(self.memory)[-batch_size:]
     
     def __len__(self):
         return len(self.memory)
@@ -74,7 +74,7 @@ class EpisodeBuffer:
         if self.random_sample:
             return random.sample(self.memory, self.batch_size)
         else:
-            return self.memory[-batch_size:]
+            return list(self.memory)[-batch_size:]
         
     def available(self):
         return len(self.memory) > self.batch_size

@@ -132,10 +132,10 @@ class DuelingDDQN():
             for step in count():
                 state, is_terminal, step_hidden_state = self.interaction_step(state, env, step_hidden_state)
                 
-                min_samples = (self.replay_buffer.batch_size + 1) * (self.episode_buffer.batch_size + 1) * self.n_warmup_batches
+                min_samples = self.replay_buffer.seq_len * self.episode_buffer.batch_size * self.n_warmup_batches
                 if self.episode_buffer.available() and len(self.replay_buffer) > min_samples:
                     experiences = self.episode_buffer.sample()
-                    experiences = make_epi_seq(experiences, batch_size=self.episode_buffer.batch_size, device=self.target_model.device)
+                    experiences = make_epi_seq(experiences, device=self.target_model.device)
                     hidden_state = self.optimize_model(experiences, hidden_state)
                 
                 if np.sum(self.episode_timestep) % self.update_target_every_steps == 0:
@@ -201,7 +201,7 @@ class DuelingDDQN():
                 if reached_goal_mean_reward: print(u'--> reached_goal_mean_reward \u2713')
                 break
                 
-        final_eval_score, score_std = self.evaluate(self.online_model, env, n_episodes=100)
+        final_eval_score, score_std = self.evaluate(self.online_model, env, n_episodes=10)
         wallclock_time = time.time() - training_start
         print('Training complete.')
         print('Final evaluation score {:.2f}\u00B1{:.2f} in {:.2f}s training time,'

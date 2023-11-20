@@ -8,14 +8,14 @@ import numpy as np
 Transition = namedtuple('Transition', ('state', 'action', 'reward', 'next_state', 'done'))
 
 
-def make_epi_seq(episode, batch_size, device):
+def make_epi_seq(episode, device):
     states = []
     actions = []
     rewards = []
     next_states = []
     dones = []
 
-    for i in range(batch_size):
+    for i in range(len(episode)):
         t = Transition(*zip(*episode[i]))
         states.append(t.state)
         actions.append(t.action)
@@ -41,19 +41,27 @@ def make_epi_seq(episode, batch_size, device):
 class ReplayBuffer:
     def __init__(self, capacity=10000, seq_len=64, random_sample=True):
         self.memory = deque([], maxlen=capacity)
-        self.batch_size = seq_len
+        self.seq_len = seq_len
         self.random_sample = random_sample
+        
+        self.capacity = capacity
+        
+        self.pos = 0
         
     def push(self, args):
         self.memory.append(Transition(*args))
         
-    def sample(self, batch_size=None):
-        if batch_size == None:
-            batch_size = self.batch_size
+    def sample(self, seq_len=None):
+        if seq_len == None:
+            seq_len = self.seq_len
+        
         if self.random_sample:
-            return random.sample(self.memory, self.batch_size)
+            return random.sample(self.memory, seq_len)
+
         else:
-            return list(self.memory)[-batch_size:]
+            idx = random.randint(0, len(self.memory) - seq_len)
+            e = list(self.memory)[idx:idx+seq_len]
+            return e             
     
     def __len__(self):
         return len(self.memory)
@@ -74,7 +82,9 @@ class EpisodeBuffer:
         if self.random_sample:
             return random.sample(self.memory, self.batch_size)
         else:
-            return list(self.memory)[-batch_size:]
+            idx = random.randint(0, len(self.memory) - batch_size)
+            e = list(self.memory)[idx:idx+batch_size]
+            return e
         
     def available(self):
         return len(self.memory) > self.batch_size

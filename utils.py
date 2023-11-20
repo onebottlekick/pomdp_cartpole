@@ -141,9 +141,10 @@ def plot_states(network_ckpt, version='v0', n_episodes=100):
         state, _ = env.reset()
         done = False
         
+        hidden_state = None
         while not done:
             states.append(state)
-            action = eval_strategy.select_action(model, state)
+            action, hidden_state = eval_strategy.select_action(model, state, hidden_state)
             state, _, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
     

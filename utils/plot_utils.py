@@ -64,9 +64,9 @@ def plot_states(algorithm, n_episodes=100, render=False):
         hidden_state = None
         while not done:
             states.append(state)
-            if config.env.mdp == 'POMDP':
+            if config.network.net_type == 'transformer':
                 action, hidden_state = eval_strategy.select_action(model, state, hidden_state)
-            elif config.env.mdp == 'FOMDP':
+            elif config.network.net_type == 'linear':
                 action = eval_strategy.select_action(model, state)
             state, _, terminated, truncated, _ = env.step(action)
             done = terminated or truncated

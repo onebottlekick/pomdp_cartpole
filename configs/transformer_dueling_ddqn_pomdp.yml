@@ -29,7 +29,7 @@ env:
 agent:
   gamma: 0.99
   max_minutes: 40
-  max_episodes: 1000
+  max_episodes: 400
   goal_mean_100_reward: 475
 
 # Strategy configuration

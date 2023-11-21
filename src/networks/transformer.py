@@ -1,17 +1,21 @@
 import torch
 import torch.nn as nn
 
-from module import BlockRecurrentTransformer
+from .modules import BlockRecurrentTransformer
 
 
-class Q_net(nn.Module):
+class TransformerDuelingQ(nn.Module):
     def __init__(self, memory_len, dim, num_layers, n_observations=4, n_actions=2):
         super().__init__()
         
         self.embed = nn.Linear(n_observations, dim)
         self.transformer = BlockRecurrentTransformer(dim, num_layers, memory_len=memory_len)
-        self.V = nn.Linear(dim, 1)
-        self.A = nn.Linear(dim, n_actions)
+        self.bottle_neck = nn.Sequential(
+            nn.Linear(dim, 512),
+            nn.Linear(512, 128)
+        )
+        self.V = nn.Linear(128, 1)
+        self.A = nn.Linear(128, n_actions)
                 
         device = 'cpu'
         if torch.cuda.is_available():
@@ -43,6 +47,7 @@ class Q_net(nn.Module):
             x = x.unsqueeze(0)
         x = self.embed(x)
         x, hidden_state = self.transformer(x, hidden_state)
+        x = self.bottle_neck(x)
         advantage = self.A(x)
         value = self.V(x)
         Q = value + advantage - advantage.mean(-1, keepdim=True).expand_as(advantage)

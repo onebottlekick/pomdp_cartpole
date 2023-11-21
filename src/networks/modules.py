@@ -14,7 +14,6 @@ def apply_rotary_pos_emb(t, freqs, scale = 1):
     if t.ndim == 4 and freqs.ndim == 3:
         freqs = rearrange(freqs, 'b n d -> b 1 n d')
 
-    # partial rotary embeddings, Wang et al. GPT-J
     t, t_unrotated = t[..., :rot_dim], t[..., rot_dim:]
     t = (t * freqs.cos() * scale) + (rotate_half(t) * freqs.sin() * scale)
     return torch.cat((t, t_unrotated), dim = -1)
@@ -121,7 +120,6 @@ class FeedForward(nn.Module):
             nn.Linear(inner_dim, dim_out, bias = not no_bias)
         )
 
-        # init last linear layer to 0
         if zero_init_output:
             init_zero_(self.ff[-1])
 
@@ -180,8 +178,6 @@ class RMSNorm(nn.Module):
         return F.normalize(x, dim = -1) * self.scale * self.g
 
 class Attention(nn.Module):
-    """Shamelessly copied from github.com/lucidrains/RETRO-pytorch
-    """
     def __init__(
         self,
         dim,
@@ -205,8 +201,6 @@ class Attention(nn.Module):
         self.to_kv = nn.Linear(dim, inner_dim * 2, bias = False)
         self.to_out = nn.Linear(inner_dim, dim)
 
-        # allowing for attending to nothing (null function)
-        # and to save attention from breaking if all retrieved chunks are padded out
         self.null_kv = nn.Parameter(torch.randn(2, inner_dim)) if null_kv else None
 
     def forward(self, x, mask = None, context = None, pos_emb = None):
@@ -218,29 +212,23 @@ class Attention(nn.Module):
         q = self.to_q(x)
         k, v = self.to_kv(kv_input).chunk(2, dim = -1)
 
-        # split heads
         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = h), (q, k, v))
 
-        # scale
         q = q * scale
 
-        # apply relative positional encoding (rotary embeddings)
         if exists(pos_emb):
             q_pos_emb, k_pos_emb = cast_tuple(pos_emb, num = 2)
             q = apply_rotary_pos_emb(q, q_pos_emb)
             k = apply_rotary_pos_emb(k, k_pos_emb)
 
-        # add null key / values
         if exists(self.null_kv):
             nk, nv = self.null_kv.unbind(dim = 0)
             nk, nv = map(lambda t: repeat(t, '(h d) -> b h 1 d', b = b, h = h), (nk, nv))
             k = torch.cat((nk, k), dim = -2)
             v = torch.cat((nv, v), dim = -2)
 
-        # derive query key similarities
         sim = einsum('b h i d, b h j d -> b h i j', q, k)
 
-        # masking
         mask_value = -torch.finfo(sim.dtype).max
 
         if exists(mask):
@@ -255,18 +243,14 @@ class Attention(nn.Module):
             causal_mask = torch.ones(i, j, device = device, dtype = torch.bool).triu(j - i + 1)
             sim = sim.masked_fill(causal_mask, mask_value)
 
-        # attention
         attn = sim.softmax(dim = -1)
 
         attn = self.dropout(attn)
 
-        # aggregate
         out = einsum('b h i j, b h j d -> b h i d', attn, v)
 
-        # merge heads
         out = rearrange(out, 'b h n d -> b n (h d)')
         
-        # combine heads linear out
         return self.to_out(out)
 
 
@@ -324,8 +308,6 @@ class BlockRecurrentAttention(nn.Module):
         input_attn = self.input_self_attn(x, mask = mask, pos_emb = self_attn_pos_emb)
         state_attn = self.state_self_attn(state, mask = state_mask, pos_emb = state_pos_emb)
 
-        # TODO: This is different from how it is implemented in the paper, because the Keys and Values aren't shared
-        # between the cross attention and self-attention. I'll implement that later, this is faster for now.
         input_as_q_cross_attn = self.input_state_cross_attn(x, context = state, mask = mask)
         state_as_q_cross_attn = self.state_input_cross_attn(state, context = x, mask = state_mask)
 

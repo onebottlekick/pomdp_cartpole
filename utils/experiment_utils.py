@@ -3,8 +3,8 @@ import os
 import numpy as np
 
 
-def load_results(algorithm_name, root='results'):
-    path = os.path.join(root, algorithm_name+'.npy')
+def load_results(algorithm_name, mdp, root='results'):
+    path = os.path.join(root, mdp, algorithm_name, algorithm_name+'_total.npy')
     results = np.load(path)
     max_t, max_r, max_s, max_sec, max_rt = np.max(results, axis=0).T
     min_t, min_r, min_s, min_sec, min_rt = np.min(results, axis=0).T

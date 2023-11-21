@@ -8,9 +8,9 @@ from utils.env_utils import get_make_env_fn
 from utils.experiment_utils import load_results
 
 
-def plot_graph(algorithm_name, kind, color='b', title=None, save=False, save_name=None, root='results'):
+def plot_graph(algorithm_name, mdp, kind, color='b', title=None, save=False, save_name=None, root='results'):
     plt.style.use('seaborn-darkgrid')
-    result_dict = load_results(algorithm_name, root)
+    result_dict = load_results(algorithm_name, mdp, root)
     max_, min_, mean_, x = result_dict[kind]['max'], result_dict[kind]['min'], result_dict[kind]['mean'], result_dict['x']
     
     if title is not None:
@@ -35,27 +35,26 @@ def plot_graph(algorithm_name, kind, color='b', title=None, save=False, save_nam
         plt.close()
 
 
-def plot_states(network_ckpt, version='v0', n_episodes=100):
-    from network import Q_net
-    from strategy import GreedyStrategy
+def plot_states(algorithm, n_episodes=100, render=False):
+    import os
     
-    config = network_ckpt.split('/')[-1].split('_')
-    mdp = config[0]
-    seq_len = int(config[2].strip('l[').strip(']'))
-    dim = int(config[3].strip('d[').strip(']'))
-    num_layers = int(config[4].strip('n[').strip('].pth'))
-    n_observations = 4 if mdp == 'FOMDP' else 2
-    n_actions = 2
+    from .train_utils import agent_dict
+    from .config_utils import config_dict
     
-    env_fn, env_kargs = get_make_env_fn(version=version, mdp=mdp, seed=None, render=False)
-    env = env_fn(**env_kargs)
+    config = config_dict[algorithm]
     
-    model = Q_net(seq_len, dim, num_layers, n_observations, n_actions)
+    agent = agent_dict[config.network.model]
+    
+    env_fn, env_kwargs = get_make_env_fn(version=config.env.version, mdp=config.env.mdp, seed=None, render=render)
+    env = env_fn(**env_kwargs)
+    
+    model = agent.value_model_fn(env.n_observations, env.n_actions)
+    network_ckpt = os.path.join('weights', config.env.mdp, algorithm, f'{algorithm}_best.pth')
     ckpt = torch.load(network_ckpt, map_location=model.device)
     model.load_state_dict(ckpt)
     model.eval()
     
-    eval_strategy = GreedyStrategy()
+    eval_strategy = agent.evaluation_strategy_fn()
     
     states = []
     for episode in range(n_episodes):
@@ -65,14 +64,17 @@ def plot_states(network_ckpt, version='v0', n_episodes=100):
         hidden_state = None
         while not done:
             states.append(state)
-            action, hidden_state = eval_strategy.select_action(model, state, hidden_state)
+            if config.env.mdp == 'POMDP':
+                action, hidden_state = eval_strategy.select_action(model, state, hidden_state)
+            elif config.env.mdp == 'FOMDP':
+                action = eval_strategy.select_action(model, state)
             state, _, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
     
     env.close()
     del env
     
-    if mdp == 'POMDP':
+    if config.env.mdp == 'POMDP':
         x = np.array(states)[:, 0]
         a = np.array(states)[:, 1]
 

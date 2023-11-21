@@ -26,7 +26,7 @@ class CartPole:
         
     def reset(self, seed=None):
         seed = seed if seed is not None else self._seed
-        state, info = self.env.reset(seed=self.seed)
+        state, info = self.env.reset(seed=seed)
         if self.mdp == 'POMDP':
             state = state[[0, 2]]
         return state, info
@@ -44,4 +44,4 @@ class CartPole:
         self.env.close()
         
     def seed(self, seed):
-        self.seed = seed
+        self._seed = seed

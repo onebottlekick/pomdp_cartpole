@@ -7,7 +7,7 @@ train:
   optimizer: adam
   max_gradient_norm: inf
   n_warmup_batches: 2
-  update_target_every_steps: 1
+  update_target_every_steps: 10
   tau: 0.1
   random_sample: False
 

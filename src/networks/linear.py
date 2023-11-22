@@ -64,7 +64,7 @@ class FCDuelingQ(nn.Module):
         super().__init__()
         self.activation = nn.ReLU()
         
-        self.self.fc1 = nn.Linear(n_observations, dim)
+        self.fc1 = nn.Linear(n_observations, dim)
         self.layers = nn.ModuleList([nn.Linear(dim, dim) for _ in range(num_layers)])
         
         self.V = nn.Linear(dim, 1)

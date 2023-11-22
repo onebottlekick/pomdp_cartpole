@@ -145,10 +145,11 @@ class TransformerDuelingDDQNAgent():
                 if is_terminal:
                     gc.collect()
                     break
+                
             if len(self.replay_buffer) > min_samples:
                 self.episode_buffer.push(self.replay_buffer.sample())
-            else:
-                continue
+            # else:
+            #     continue
             
             episode_elapsed = time.time() - episode_start
             self.episode_seconds.append(episode_elapsed)

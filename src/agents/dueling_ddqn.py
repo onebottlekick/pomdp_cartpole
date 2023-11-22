@@ -225,7 +225,7 @@ class DuelingDDQNAgent():
         paths = glob.glob(os.path.join(self.checkpoint_dir, '*.tar'))
         paths_dic = {int(path.split('.')[-2]):path for path in paths}
         last_ep = max(paths_dic.keys())
-        checkpoint_idxs = np.linspace(1, last_ep+1, n_checkpoints, endpoint=True, dtype=np.int)-1
+        checkpoint_idxs = np.linspace(1, last_ep+1, n_checkpoints, endpoint=True, dtype=int)-1
 
         for idx, path in paths_dic.items():
             if idx in checkpoint_idxs:

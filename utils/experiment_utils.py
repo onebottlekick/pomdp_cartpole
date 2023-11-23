@@ -1,37 +1,50 @@
 import os
 
+import matplotlib.pyplot as plt
 import numpy as np
+import torch
+
+from utils.env_utils import get_make_env_fn
 
 
-def load_results(algorithm_name, mdp, root='results'):
-    path = os.path.join(root, mdp, algorithm_name, algorithm_name+'_total.npy')
+def load_results(algorithm_name, mdp, root='results', seed=None):
+    if seed is not None:
+        path = os.path.join(root, mdp, algorithm_name, algorithm_name+'_seed'+str(seed)+'.npy')
+    else:
+        path = os.path.join(root, mdp, algorithm_name, algorithm_name+'_total.npy')
+    
     results = np.load(path)
+    
+    if seed is not None:
+        return results.T
+    
     max_t, max_r, max_s, max_sec, max_rt = np.max(results, axis=0).T
     min_t, min_r, min_s, min_sec, min_rt = np.min(results, axis=0).T
     mean_t, mean_r, mean_s, mean_sec, mean_rt = np.mean(results, axis=0).T
     x = np.arange(np.max((len(mean_s), len(mean_s))))
+    
     result_dict = {
-        't':{
+        'total_steps':{
             'max' : max_t,
             'min' : min_t,
             'mean' : mean_t
         },
-        'r':{
+        'train_rewards':{
             'max' : max_r,
             'min' : min_r,
             'mean' : mean_r
         },
-        's':{
+        'eval_scores':{
             'max' : max_s,
             'min' : min_s,
             'mean' : mean_s
         },
-        'sec':{
+        'training_time':{
             'max' : max_sec,
             'min' : min_sec,
             'mean' : mean_sec
         },
-        'rt':{
+        'wallclock_elapsed':{
             'max' : max_rt,
             'min' : min_rt,
             'mean' : mean_rt
@@ -40,3 +53,111 @@ def load_results(algorithm_name, mdp, root='results'):
     }
     
     return result_dict
+
+
+def plot_results(algorithm_name, mdp, kind, seeds=None, color='b', title=None, save=False, save_name=None, root='results'):
+    plt.style.use('seaborn-darkgrid')
+    
+    if seeds is not None:
+        for seed in seeds:
+            results = load_results(algorithm_name, mdp, seed=seed)
+            results = {
+                      'total_steps': results[0],
+                      'train_rewards': results[1],
+                      'eval_scores': results[2],
+                      'training_time': results[3],
+                      'wallclock_elapsed': results[4]
+                      }[kind]
+            
+            plt.plot(results, linewidth=1.0, label=f'seed: {seed}')
+    
+    else:
+        results = load_results(algorithm_name, mdp, root)
+
+        max_, min_, mean_, x = results[kind]['max'], results[kind]['min'], results[kind]['mean'], results['x']
+
+        plt.xlabel('Episodes')
+        plt.plot(max_, color, linewidth=1.0)
+        plt.plot(min_, color, linewidth=1.0)
+        plt.plot(mean_, color+'--', linewidth=2.0)
+        plt.fill_between(x, min_, max_, facecolor=color, alpha=0.3)
+    
+    if title is not None:
+        plt.title(title)
+    
+    if save:
+        save_dir = os.path.join('train', root, 'figure')
+        os.makedirs(save_dir, exist_ok=True)
+        if save_name is not None:
+            save_name = os.path.join(save_dir, save_name + '.png')
+        else:
+            save_name = os.path.join(save_dir, algorithm_name + '_' + kind + '.png')
+        plt.savefig(save_name)
+        plt.close()
+        
+    else:
+        plt.show()
+        plt.close()
+
+
+def plot_states(algorithm, n_episodes=100, render=False):
+    import os
+    
+    from .agent_utils import get_agent
+    from .config_utils import load_config
+    
+    config_path = f'configs/{algorithm}.yml'
+    config = load_config(config_path)
+    
+    agent = get_agent(algorithm)(config)
+    
+    env_fn, env_kwargs = get_make_env_fn(version=config.env.version, mdp=config.env.mdp, seed=None, render=render)
+    env = env_fn(**env_kwargs)
+    
+    model = agent.value_model_fn(env.n_observations, env.n_actions)
+    network_ckpt = os.path.join('weights', config.env.mdp, algorithm, f'{algorithm}_best.pth')
+    ckpt = torch.load(network_ckpt, map_location=model.device)
+    model.load_state_dict(ckpt)
+    model.eval()
+    
+    eval_strategy = agent.evaluation_strategy_fn()
+    
+    states = []
+    for episode in range(n_episodes):
+        state, _ = env.reset()
+        done = False
+        
+        hidden_state = None
+        cell_state = None
+        while not done:
+            states.append(state)
+            if config.network.net_type in ['transformer', 'mtq']:
+                action, hidden_state = eval_strategy.select_action(model, state, hidden_state)
+            elif config.network.net_type in ['fcq', 'dueling_fcq']:
+                action = eval_strategy.select_action(model, state)
+            elif config.network.net_type in ['lstm']:
+                action, hidden_state, cell_state = eval_strategy.select_action(model, state, hidden_state, cell_state)
+            state, _, terminated, truncated, _ = env.step(action)
+            done = terminated or truncated
+    
+    env.close()
+    del env
+    
+    if config.env.mdp == 'POMDP':
+        x = np.array(states)[:, 0]
+        a = np.array(states)[:, 1]
+
+    else:
+        x = np.array(states)[:, 0]
+        a = np.array(states)[:, 2]
+    
+    plt.style.use('seaborn-darkgrid')
+    plt.plot(x)
+    plt.xlabel('Steps')
+    plt.ylabel('Cart Position')
+    plt.show()
+    
+    plt.plot(a)
+    plt.xlabel('Steps')
+    plt.ylabel('Pole Angle')
+    plt.show()

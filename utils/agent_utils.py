@@ -15,5 +15,5 @@ def get_agent(algorithm):
         'transformer_dueling_ddqn': TransformerDuelingDDQNAgent,
         'mtqn': MTQNAgent,
     }
-    
-    return agent_dict[algorithm.split('_')[0]]
+    algorithm = algorithm.rstrip('_pomdp')
+    return agent_dict[algorithm]

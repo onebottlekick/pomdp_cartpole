@@ -32,11 +32,11 @@ class MTQNAgent:
         self.update_target_every_steps = config.train.update_target_every_steps
         self.tau = config.train.tau
 
-    def optimize_model(self, experiences, hidden_state=None):
+    def optimize_model(self, experiences):
         states, actions, rewards, next_states, is_terminals = experiences
         batch_size = len(is_terminals)
 
-        a_q_sp, hidden_state = self.online_model(next_states)
+        a_q_sp, _ = self.online_model(next_states)
         argmax_a_q_sp = a_q_sp.max(1)[1]
         q_sp, _ = self.target_model(next_states)
         q_sp = q_sp.detach()
@@ -54,8 +54,6 @@ class MTQNAgent:
         torch.nn.utils.clip_grad_norm_(self.online_model.parameters(), 
                                        self.max_gradient_norm)
         self.value_optimizer.step()
-        
-        return hidden_state
 
     def interaction_step(self, state, env, hidden_state=None):
         action, hidden_state = self.training_strategy.select_action(self.online_model, state, hidden_state)
@@ -122,16 +120,15 @@ class MTQNAgent:
             self.episode_exploration.append(0.0)
 
             hidden_state = None
-            step_hidden_state = None
             for step in count():
-                state, is_terminal, step_hidden_state = self.interaction_step(state, env, step_hidden_state)
+                state, is_terminal, hidden_state = self.interaction_step(state, env, hidden_state)
                 
                 min_samples = self.replay_buffer.seq_len * self.n_warmup_batches
                 if len(self.replay_buffer) > min_samples:
                     experiences = self.replay_buffer.sample()
                     experiences = Transition(*zip(*experiences))
                     experiences = self.online_model.load(experiences)
-                    hidden_state = self.optimize_model(experiences, hidden_state)
+                    self.optimize_model(experiences)
                 
                 if np.sum(self.episode_timestep) % self.update_target_every_steps == 0:
                     self.update_network()

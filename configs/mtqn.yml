@@ -3,9 +3,9 @@ train:
   seeds: [12, 34, 56, 78, 90]
   seq_len: 64
   learning_rate: 5e-4
-  optimizer: adam
+  optimizer: rmsprop
   max_gradient_norm: inf
-  n_warmup_batches: 2
+  n_warmup_batches: 5
   update_target_every_steps: 10
   tau: 0.1
   random_sample: True
@@ -28,8 +28,8 @@ env:
 # Agent configuration
 agent:
   gamma: 0.99
-  max_minutes: 40
-  max_episodes: 400
+  max_minutes: 10000
+  max_episodes: 10000
   goal_mean_100_reward: 475
 
 # Strategy configuration

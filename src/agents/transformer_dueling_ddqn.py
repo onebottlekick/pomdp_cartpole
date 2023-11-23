@@ -8,35 +8,31 @@ from itertools import count
 import numpy as np
 import torch
 
-from utils.buffer_utils import make_epi_seq
+from src.buffer.replay_buffer import ReplayBuffer
+from src.buffer.episode_buffer import EpisodeBuffer
+from utils.buffer_utils import Transition, make_epi_seq
+from utils.network_utils import get_network
 from utils.seed_utils import seed_everything
+from utils.strategy import EGreedyExpStrategy, GreedyStrategy
+from utils.train_utils import optimizer_dict
 
 
-class TransformerDuelingDDQNAgent():
-    def __init__(self, 
-                 replay_buffer_fn, 
-                 episode_buffer_fn,
-                 value_model_fn, 
-                 value_optimizer_fn, 
-                 value_optimizer_lr,
-                 max_gradient_norm,
-                 training_strategy_fn,
-                 evaluation_strategy_fn,
-                 n_warmup_batches,
-                 update_target_every_steps,
-                 tau,
-                 **kwargs):
-        self.replay_buffer_fn = replay_buffer_fn
-        self.episode_buffer_fn = episode_buffer_fn
-        self.value_model_fn = value_model_fn
-        self.value_optimizer_fn = value_optimizer_fn
-        self.value_optimizer_lr = value_optimizer_lr
-        self.max_gradient_norm = max_gradient_norm
-        self.training_strategy_fn = training_strategy_fn
-        self.evaluation_strategy_fn = evaluation_strategy_fn
-        self.n_warmup_batches = n_warmup_batches
-        self.update_target_every_steps = update_target_every_steps
-        self.tau = tau
+class TransformerDuelingDDQNAgent:
+    def __init__(self, config):        
+        self.replay_buffer_fn = lambda: ReplayBuffer(seq_len=config.train.seq_len)
+        self.episode_buffer_fn = lambda: EpisodeBuffer(batch_size=config.train.batch_size)
+        self.value_model_fn = get_network(config)
+        self.value_optimizer_fn = lambda model, lr: optimizer_dict[config.train.optimizer](model.parameters(), lr=lr)
+        self.value_optimizer_lr = config.train.learning_rate
+        self.max_gradient_norm = config.train.max_gradient_norm
+        self.training_strategy_fn = lambda: EGreedyExpStrategy(init_epsilon=config.train.epsilon_start,
+                                                               min_epsilon=config.train.epsilon_end,
+                                                               decay_steps=config.train.epsilon_decay_steps,
+                                                               net_type=config.network.net_type)
+        self.evaluation_strategy_fn = lambda: GreedyStrategy(net_type=config.network.net_type)
+        self.n_warmup_batches = config.train.n_warmup_batches
+        self.update_target_every_steps = config.train.update_target_every_steps
+        self.tau = config.train.tau
 
     def optimize_model(self, experiences, hidden_state=None):
         states, actions, rewards, next_states, is_terminals = experiences

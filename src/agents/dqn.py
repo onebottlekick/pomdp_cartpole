@@ -8,32 +8,30 @@ from itertools import count
 import numpy as np
 import torch
 
+from src.buffer.replay_buffer import ReplayBuffer
 from utils.buffer_utils import Transition
 from utils.seed_utils import seed_everything
+from utils.strategy import EGreedyExpStrategy, GreedyStrategy
+from utils.network_utils import get_network
+from utils.train_utils import optimizer_dict
 
 ERASE_LINE = '\x1b[2K'
 LEAVE_PRINT_EVERY_N_SECS = 60
 
 
 class DQNAgent:
-    def __init__(self, 
-                 replay_buffer_fn, 
-                 value_model_fn, 
-                 value_optimizer_fn, 
-                 value_optimizer_lr,
-                 training_strategy_fn,
-                 evaluation_strategy_fn,
-                 n_warmup_batches,
-                 update_target_every_steps,
-                 **kwargs):
-        self.replay_buffer_fn = replay_buffer_fn
-        self.value_model_fn = value_model_fn
-        self.value_optimizer_fn = value_optimizer_fn
-        self.value_optimizer_lr = value_optimizer_lr
-        self.training_strategy_fn = training_strategy_fn
-        self.evaluation_strategy_fn = evaluation_strategy_fn
-        self.n_warmup_batches = n_warmup_batches
-        self.update_target_every_steps = update_target_every_steps
+    def __init__(self, config):
+        self.replay_buffer_fn = lambda: ReplayBuffer(seq_len=config.train.batch_size)
+        self.value_model_fn = get_network(config)
+        self.value_optimizer_fn = lambda net, lr: optimizer_dict[config.train.optimizer](net.parameters(), lr=lr)
+        self.value_optimizer_lr = float(config.train.learning_rate)
+        self.training_strategy_fn = lambda: EGreedyExpStrategy(init_epsilon=config.strategy.init_epsilon,
+                                                       min_epsilon=config.strategy.min_epsilon,
+                                                       decay_steps=config.strategy.decay_steps,
+                                                       net_type=config.network.net_type)
+        self.evaluation_strategy_fn = lambda: GreedyStrategy(net_type=config.network.net_type)
+        self.n_warmup_batches = config.train.n_warmup_batches
+        self.update_target_every_steps = config.train.update_target_every_steps
 
     def optimize_model(self, experiences):
         states, actions, rewards, next_states, is_terminals = experiences

@@ -8,33 +8,29 @@ from itertools import count
 import numpy as np
 import torch
 
+from src.buffer.replay_buffer import ReplayBuffer
 from utils.buffer_utils import Transition
 from utils.seed_utils import seed_everything
+from utils.strategy import EGreedyExpStrategy, GreedyStrategy
+from utils.network_utils import get_network
+from utils.train_utils import optimizer_dict
 
 
-class MTQNAgent():
-    def __init__(self, 
-                 replay_buffer_fn, 
-                 value_model_fn, 
-                 value_optimizer_fn, 
-                 value_optimizer_lr,
-                 max_gradient_norm,
-                 training_strategy_fn,
-                 evaluation_strategy_fn,
-                 n_warmup_batches,
-                 update_target_every_steps,
-                 tau,
-                 **kwargs):
-        self.replay_buffer_fn = replay_buffer_fn
-        self.value_model_fn = value_model_fn
-        self.value_optimizer_fn = value_optimizer_fn
-        self.value_optimizer_lr = value_optimizer_lr
-        self.max_gradient_norm = max_gradient_norm
-        self.training_strategy_fn = training_strategy_fn
-        self.evaluation_strategy_fn = evaluation_strategy_fn
-        self.n_warmup_batches = n_warmup_batches
-        self.update_target_every_steps = update_target_every_steps
-        self.tau = tau
+class MTQNAgent:
+    def __init__(self, config):
+        self.replay_buffer_fn = lambda: ReplayBuffer(seq_len=config.train.seq_len)
+        self.value_model_fn = get_network(config)
+        self.value_optimizer_fn = lambda net, lr: optimizer_dict[config.train.optimizer](net.parameters(), lr=lr)
+        self.value_optimizer_lr = float(config.train.learning_rate)
+        self.max_gradient_norm = float(config.train.max_gradient_norm)
+        self.training_strategy_fn = lambda: EGreedyExpStrategy(init_epsilon=config.strategy.init_epsilon,
+                                                       min_epsilon=config.strategy.min_epsilon,
+                                                       decay_steps=config.strategy.decay_steps,
+                                                       net_type=config.network.net_type)
+        self.evaluation_strategy_fn = lambda: GreedyStrategy(net_type=config.network.net_type)
+        self.n_warmup_batches = config.train.n_warmup_batches
+        self.update_target_every_steps = config.train.update_target_every_steps
+        self.tau = config.train.tau
 
     def optimize_model(self, experiences, hidden_state=None):
         states, actions, rewards, next_states, is_terminals = experiences
@@ -43,7 +39,7 @@ class MTQNAgent():
         a_q_sp, hidden_state = self.online_model(next_states)
         argmax_a_q_sp = a_q_sp.max(1)[1]
         q_sp, _ = self.target_model(next_states)
-        q_sq = q_sp.detach()
+        q_sp = q_sp.detach()
         
         max_a_q_sp = q_sp[
             np.arange(batch_size), argmax_a_q_sp].unsqueeze(1)

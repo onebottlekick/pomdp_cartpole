@@ -70,6 +70,7 @@ def plot_results(algorithm_name, mdp, kind, seeds=None, color='b', title=None, s
                       }[kind]
             
             plt.plot(results, linewidth=1.0, label=f'seed: {seed}')
+        plt.legend(loc='lower right')
     
     else:
         results = load_results(algorithm_name, mdp, root)
@@ -100,7 +101,7 @@ def plot_results(algorithm_name, mdp, kind, seeds=None, color='b', title=None, s
         plt.close()
 
 
-def plot_states(algorithm, n_episodes=100, render=False):
+def plot_states(algorithm, n_episodes=100, seed=None, render=False):
     import os
     
     from .agent_utils import get_agent
@@ -111,7 +112,7 @@ def plot_states(algorithm, n_episodes=100, render=False):
     
     agent = get_agent(algorithm)(config)
     
-    env_fn, env_kwargs = get_make_env_fn(version=config.env.version, mdp=config.env.mdp, seed=None, render=render)
+    env_fn, env_kwargs = get_make_env_fn(version=config.env.version, mdp=config.env.mdp, seed=seed, render=render)
     env = env_fn(**env_kwargs)
     
     model = agent.value_model_fn(env.n_observations, env.n_actions)

@@ -11,7 +11,7 @@ train:
 # Network configuration
 network:
   model: dqn
-  net_type: linear
+  net_type: fcq
   in_dim: 128
   num_layers: 2
 

@@ -9,13 +9,13 @@ class GreedyStrategy():
 
     def select_action(self, model, state=None, hidden_state=None):
         with torch.no_grad():
-            if self.net_type == 'transformer':
+            if self.net_type in ['transformer', 'mtq']:
                 q_values, hidden_state = model(state, hidden_state)
                 q_values = q_values.cpu().detach().data.numpy().squeeze()
                 action = np.argmax(q_values)
                 return action, hidden_state
             
-            elif self.net_type == 'linear':
+            elif self.net_type in ['fcq', 'dueling_fcq']:
                 q_values = model(state).cpu().detach().data.numpy().squeeze()
                 action = np.argmax(q_values)
                 return action
@@ -30,14 +30,14 @@ class EGreedyStrategy():
     def select_action(self, model, state=None, hidden_state=None):
         self.exploratory_action_taken = False
         with torch.no_grad():
-            if self.net_type == 'transformer':
+            if self.net_type in ['transformer', 'mtq']:
                 q_values, hidden_state = model(state, hidden_state)
                 q_values = q_values.cpu().detach().data.numpy().squeeze()
                 action = np.argmax(q_values) if np.random.rand() > self.epsilon else np.random.randint(len(q_values))
                 self.exploratory_action_taken = action != np.argmax(q_values)
                 return action, hidden_state
             
-            elif self.net_type == 'linear':
+            elif self.net_type in ['fcq', 'dueling_fcq']:
                 q_values = model(state).cpu().detach().data.numpy().squeeze()
                 action = np.argmax(q_values) if np.random.rand() > self.epsilon else np.random.randint(len(q_values))
                 self.exploratory_action_taken = action != np.argmax(q_values)
@@ -64,7 +64,7 @@ class EGreedyExpStrategy():
     def select_action(self, model, state, hidden_state=None):
         self.exploratory_action_taken = False
         with torch.no_grad():
-            if self.net_type == 'transformer':
+            if self.net_type in ['transformer', 'mtq']:
                 q_values, hidden_state = model(state, hidden_state)
                 q_values = q_values.cpu().detach().data.numpy().squeeze()
                 action = np.argmax(q_values) if np.random.rand() > self.epsilon else np.random.randint(len(q_values))
@@ -72,7 +72,7 @@ class EGreedyExpStrategy():
                 self._epsilon_update()
                 return action, hidden_state
             
-            elif self.net_type == 'linear':
+            elif self.net_type in ['fcq', 'dueling_fcq']:
                 q_values = model(state).cpu().detach().data.numpy().squeeze()
                 action = np.argmax(q_values) if np.random.rand() > self.epsilon else np.random.randint(len(q_values))
                 self._epsilon_update()

@@ -17,6 +17,7 @@ network:
   net_type: transformer
   in_dim: 64
   num_layers: 1
+  num_heads: 8
   memory_len: 64
 
 # Environment configuration

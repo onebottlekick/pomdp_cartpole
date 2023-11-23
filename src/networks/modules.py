@@ -324,12 +324,12 @@ class BlockRecurrentAttention(nn.Module):
     
     
 class BlockRecurrentTransformer(nn.Module):
-    def __init__(self, dim, num_layers, memory_len):
+    def __init__(self, dim, num_layers, memory_len, num_heads=8):
         super().__init__()
         
         self.layers = nn.ModuleList([])
         for _ in range(num_layers):
-            self.layers.append(BlockRecurrentAttention(dim, dim, state_len=memory_len))
+            self.layers.append(BlockRecurrentAttention(dim, dim, state_len=memory_len, heads=num_heads))
     
     def forward(self, x, hidden_state=None):
         for attn in self.layers:

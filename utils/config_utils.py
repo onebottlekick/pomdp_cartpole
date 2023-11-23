@@ -32,6 +32,9 @@ dueling_ddqn_pomdp_config = load_config(path='configs/dueling_ddqn_pomdp.yml')
 transformer_dueling_ddqn_config = load_config(path='configs/transformer_dueling_ddqn.yml')
 transformer_dueling_ddqn_pomdp_config = load_config(path='configs/transformer_dueling_ddqn_pomdp.yml')
 
+mtqn_config = load_config(path='configs/mtqn.yml')
+mtqn_pomdp_config = load_config(path='configs/mtqn_pomdp.yml')
+
 
 config_dict = {
     'dqn': dqn_config,
@@ -41,9 +44,7 @@ config_dict = {
     'dueling_ddqn': dueling_ddqn_config,
     'dueling_ddqn_pomdp': dueling_ddqn_pomdp_config,
     'transformer_dueling_ddqn': transformer_dueling_ddqn_config,
-    'transformer_dueling_ddqn_pomdp': transformer_dueling_ddqn_pomdp_config
+    'transformer_dueling_ddqn_pomdp': transformer_dueling_ddqn_pomdp_config,
+    'mtqn': mtqn_config,
+    'mtqn_pomdp': mtqn_pomdp_config,
 }
-
-if __name__ == "__main__":
-    print(type(transformer_dueling_ddqn_config.train.learning_rate))
-

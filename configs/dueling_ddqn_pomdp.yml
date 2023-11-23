@@ -13,7 +13,7 @@ train:
 # Network configuration
 network:
   model: dueling_ddqn
-  net_type: linear
+  net_type: dueling_fcq
   in_dim: 128
   num_layers: 2
 

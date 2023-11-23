@@ -1,21 +1,23 @@
 # Training configuration
 train:
   seeds: [12, 34, 56, 78, 90]
-  batch_size: 64
+  seq_len: 64
   learning_rate: 5e-4
   optimizer: adam
   max_gradient_norm: inf
-  n_warmup_batches: 5
-  update_target_every_steps: 1
+  n_warmup_batches: 2
+  update_target_every_steps: 10
   tau: 0.1
   random_sample: True
 
 # Network configuration
 network:
-  model: dueling_ddqn
-  net_type: dueling_fcq
-  in_dim: 128
-  num_layers: 2
+  model: mtqn
+  net_type: mtq
+  in_dim: 64
+  num_layers: 1
+  num_heads: 8
+  memory_len: 64
 
 # Environment configuration
 env:
@@ -25,8 +27,8 @@ env:
 
 # Agent configuration
 agent:
-  gamma: 1.0
-  max_minutes: 20
+  gamma: 0.99
+  max_minutes: 40
   max_episodes: 400
   goal_mean_100_reward: 475
 

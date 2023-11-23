@@ -19,9 +19,9 @@ ERASE_LINE = '\x1b[2K'
 LEAVE_PRINT_EVERY_N_SECS = 60
 
 
-class DQNAgent:
+class DRQNAgent:
     def __init__(self, config):
-        self.replay_buffer_fn = lambda: ReplayBuffer(seq_len=config.train.batch_size)
+        self.replay_buffer_fn = lambda: ReplayBuffer(seq_len=config.train.seq_len)
         self.value_model_fn = get_network(config)
         self.value_optimizer_fn = lambda net, lr: optimizer_dict[config.train.optimizer](net.parameters(), lr=lr)
         self.value_optimizer_lr = float(config.train.learning_rate)
@@ -33,12 +33,14 @@ class DQNAgent:
         self.n_warmup_batches = config.train.n_warmup_batches
         self.update_target_every_steps = config.train.update_target_every_steps
 
-    def optimize_model(self, experiences):
+    def optimize_model(self, experiences, h=None, c=None):
         states, actions, rewards, next_states, is_terminals = experiences
         
-        max_a_q_sp = self.target_model(next_states).detach().max(1)[0].unsqueeze(1)
+        max_a_q_sp, _, _ = self.target_model(next_states)
+        max_a_q_sp = max_a_q_sp.detach().max(1)[0].unsqueeze(1)
         target_q_sa = rewards + (self.gamma * max_a_q_sp * (1 - is_terminals))
-        q_sa = self.online_model(states).gather(1, actions)
+        q_sa, _, _ = self.online_model(states)
+        q_sa = q_sa.gather(1, actions)
 
         td_error = q_sa - target_q_sa
         value_loss = td_error.pow(2).mul(0.5).mean()
@@ -46,8 +48,8 @@ class DQNAgent:
         value_loss.backward()
         self.value_optimizer.step()
 
-    def interaction_step(self, state, env):
-        action = self.training_strategy.select_action(self.online_model, state)
+    def interaction_step(self, state, env, h=None, c=None):
+        action, h, c = self.training_strategy.select_action(self.online_model, state, h, c)
         new_state, reward, terminated, truncated, _ = env.step(action)
         is_failure = terminated
         is_terminal = terminated or truncated
@@ -57,7 +59,7 @@ class DQNAgent:
         self.episode_reward[-1] += reward
         self.episode_timestep[-1] += 1
         self.episode_exploration[-1] += int(self.training_strategy.exploratory_action_taken)
-        return new_state, is_terminal
+        return new_state, is_terminal, h, c
     
     
     def update_network(self):
@@ -101,15 +103,15 @@ class DQNAgent:
         training_time = 0
         for episode in range(1, max_episodes + 1):
             episode_start = time.time()
-            
             state, _ = env.reset(seed=self.seed)
             is_terminal = False
             self.episode_reward.append(0.0)
             self.episode_timestep.append(0.0)
             self.episode_exploration.append(0.0)
 
+            h, c = None, None
             for step in count():
-                state, is_terminal = self.interaction_step(state, env)
+                state, is_terminal, h, c = self.interaction_step(state, env, h, c)
                 
                 min_samples = self.replay_buffer.batch_size * self.n_warmup_batches
                 if len(self.replay_buffer) > min_samples:
@@ -194,8 +196,9 @@ class DQNAgent:
             s, _ = eval_env.reset(seed=self.seed)
             d = False
             rs.append(0)
+            h, c = None, None
             for _ in count():
-                a = self.evaluation_strategy.select_action(eval_policy_model, s)
+                a, h, c = self.evaluation_strategy.select_action(eval_policy_model, s, h, c)
                 s, r, terminated, truncated, _ = eval_env.step(a)
                 d = terminated or truncated
                 rs[-1] += r

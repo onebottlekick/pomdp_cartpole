@@ -7,7 +7,7 @@ class GreedyStrategy():
         self.exploratory_action_taken = False
         self.net_type = net_type
 
-    def select_action(self, model, state=None, hidden_state=None):
+    def select_action(self, model, state=None, hidden_state=None, cell_state=None):
         with torch.no_grad():
             if self.net_type in ['transformer', 'mtq']:
                 q_values, hidden_state = model(state, hidden_state)
@@ -20,6 +20,12 @@ class GreedyStrategy():
                 action = np.argmax(q_values)
                 return action
             
+            elif self.net_type in ['lstm']:
+                q_values, hidden_state, cell_state = model(state, hidden_state, cell_state)
+                q_values = q_values.cpu().detach().data.numpy().squeeze()
+                action = np.argmax(q_values)
+                return action, hidden_state, cell_state
+            
         
 class EGreedyStrategy():
     def __init__(self, epsilon=0.1, net_type='transformer'):
@@ -27,7 +33,7 @@ class EGreedyStrategy():
         self.exploratory_action_taken = None
         self.net_type = net_type
 
-    def select_action(self, model, state=None, hidden_state=None):
+    def select_action(self, model, state=None, hidden_state=None, cell_state=None):
         self.exploratory_action_taken = False
         with torch.no_grad():
             if self.net_type in ['transformer', 'mtq']:
@@ -42,6 +48,13 @@ class EGreedyStrategy():
                 action = np.argmax(q_values) if np.random.rand() > self.epsilon else np.random.randint(len(q_values))
                 self.exploratory_action_taken = action != np.argmax(q_values)
                 return action
+            
+            elif self.net_type in ['lstm']:
+                q_values, hidden_state, cell_state = model(state, hidden_state, cell_state)
+                q_values = q_values.cpu().detach().data.numpy().squeeze()
+                action = np.argmax(q_values) if np.random.rand() > self.epsilon else np.random.randint(len(q_values))
+                self.exploratory_action_taken = action != np.argmax(q_values)
+                return action, hidden_state, cell_state
 
     
 class EGreedyExpStrategy():
@@ -61,7 +74,7 @@ class EGreedyExpStrategy():
         self.t += 1
         return self.epsilon
 
-    def select_action(self, model, state, hidden_state=None):
+    def select_action(self, model, state, hidden_state=None, cell_state=None):
         self.exploratory_action_taken = False
         with torch.no_grad():
             if self.net_type in ['transformer', 'mtq']:
@@ -78,3 +91,11 @@ class EGreedyExpStrategy():
                 self._epsilon_update()
                 self.exploratory_action_taken = action != np.argmax(q_values)
                 return action
+            
+            elif self.net_type in ['lstm']:
+                q_values, hidden_state, cell_state = model(state, hidden_state, cell_state)
+                q_values = q_values.cpu().detach().data.numpy().squeeze()
+                action = np.argmax(q_values) if np.random.rand() > self.epsilon else np.random.randint(len(q_values))
+                self._epsilon_update()
+                self.exploratory_action_taken = action != np.argmax(q_values)
+                return action, hidden_state, cell_state

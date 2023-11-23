@@ -26,9 +26,6 @@ class FCQ(nn.Module):
             m.weight.data.normal_(0, 0.02)
             if m.bias is not None:
                 m.bias.data.zero_()
-        elif isinstance(m, nn.LayerNorm):
-            m.weight.data.fill_(1.0)
-            m.bias.data.zero_()
             
     def _format(self, state):
         x = state

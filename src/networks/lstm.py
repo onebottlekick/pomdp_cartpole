@@ -11,7 +11,8 @@ class LSTMQ(nn.Module):
         self.activation = nn.ReLU()
         
         self.fc1 = nn.Linear(n_observations, dim)
-        self.lstm = nn.LSTM(dim, dim, num_layers, batch_first=True)
+        self.lstm = nn.LSTM(dim, dim, num_layers=1, batch_first=True)
+        self.layers = nn.ModuleList([nn.Linear(dim, dim) for _ in range(num_layers)])
         self.out = nn.Linear(dim, n_actions)
         
         device = 'cpu'
@@ -46,6 +47,9 @@ class LSTMQ(nn.Module):
             
         x, (h, c) = self.lstm(x, (h, c))
         x = x.view(-1, self.dim)
+        x = self.activation(x)
+        for layer in self.layers:
+            x = self.activation(layer(x))
         x = self.activation(x)
         x = self.out(x)
         return x, h, c

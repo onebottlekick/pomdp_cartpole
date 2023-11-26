@@ -35,4 +35,4 @@ def get_network(config):
                                         n_actions=nA),
     }
     
-    return network_dict[config.network.net_type]
+    return network_dict[config.network.type]

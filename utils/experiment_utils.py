@@ -132,11 +132,11 @@ def plot_states(algorithm, n_episodes=100, seed=None, render=False):
         cell_state = None
         while not done:
             states.append(state)
-            if config.network.net_type in ['transformer', 'mtq']:
+            if config.network.type in ['transformer', 'mtq']:
                 action, hidden_state = eval_strategy.select_action(model, state, hidden_state)
-            elif config.network.net_type in ['fcq', 'dueling_fcq']:
+            elif config.network.type in ['fcq', 'dueling_fcq']:
                 action = eval_strategy.select_action(model, state)
-            elif config.network.net_type in ['lstm']:
+            elif config.network.type in ['lstm']:
                 action, hidden_state, cell_state = eval_strategy.select_action(model, state, hidden_state, cell_state)
             state, _, terminated, truncated, _ = env.step(action)
             done = terminated or truncated

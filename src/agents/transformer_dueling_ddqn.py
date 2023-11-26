@@ -28,8 +28,8 @@ class TransformerDuelingDDQNAgent:
         self.training_strategy_fn = lambda: EGreedyExpStrategy(init_epsilon=config.train.epsilon_start,
                                                                min_epsilon=config.train.epsilon_end,
                                                                decay_steps=config.train.epsilon_decay_steps,
-                                                               net_type=config.network.net_type)
-        self.evaluation_strategy_fn = lambda: GreedyStrategy(net_type=config.network.net_type)
+                                                               type=config.network.type)
+        self.evaluation_strategy_fn = lambda: GreedyStrategy(type=config.network.type)
         self.n_warmup_batches = config.train.n_warmup_batches
         self.update_target_every_steps = config.train.update_target_every_steps
         self.tau = config.train.tau

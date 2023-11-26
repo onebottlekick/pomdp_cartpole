@@ -1,5 +1,3 @@
-from itertools import count
-
 import numpy as np
 import torch
 
@@ -34,39 +32,3 @@ class MTQNAgent(BaseAgent):
         torch.nn.utils.clip_grad_norm_(self.online_model.parameters(), 
                                        self.max_gradient_norm)
         self.value_optimizer.step()
-
-    def interaction_step(self, state, env, hidden_state=None):
-        action, hidden_state = self.training_strategy.select_action(self.online_model, state, hidden_state)
-        new_state, reward, terminated, truncated, info = env.step(action)
-        is_failure = terminated
-        is_terminal = terminated or truncated
-        experience = (state, action, reward, new_state, float(is_failure))
-        self.replay_buffer.push(experience)
-        self.episode_reward[-1] += reward
-        self.episode_timestep[-1] += 1
-        self.episode_exploration[-1] += int(self.training_strategy.exploratory_action_taken)
-        return new_state, is_terminal, hidden_state
-    
-    def update_network(self, tau=None):
-        tau = self.tau if tau is None else tau
-        for target, online in zip(self.target_model.parameters(), 
-                                  self.online_model.parameters()):
-            target_ratio = (1.0 - tau) * target.data
-            online_ratio = tau * online.data
-            mixed_weights = target_ratio + online_ratio
-            target.data.copy_(mixed_weights)
-    
-    def evaluate(self, eval_policy_model, eval_env, n_episodes=1):
-        rs = []
-        for _ in range(n_episodes):
-            s, _ = eval_env.reset()
-            d = False
-            rs.append(0)
-            hidden_state = None
-            for _ in count():
-                a, hidden_state = self.evaluation_strategy.select_action(eval_policy_model, s, hidden_state)
-                s, r, terminated, truncated, _ = eval_env.step(a)
-                d = terminated or truncated
-                rs[-1] += r
-                if d: break
-        return np.mean(rs), np.std(rs)

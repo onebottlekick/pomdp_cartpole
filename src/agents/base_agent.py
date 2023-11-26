@@ -17,7 +17,7 @@ from utils.train_utils import optimizer_dict
 
 
 class BaseAgent:
-    def __init__(self, config, logger):
+    def __init__(self, config, logger):        
         self.replay_buffer_fn = lambda: ReplayBuffer(seq_len=config.train.batch_size)
         self.value_model_fn = get_network(config)
         self.value_optimizer_fn = lambda net, lr: optimizer_dict[config.train.optimizer](net.parameters(), lr=lr)
@@ -25,19 +25,42 @@ class BaseAgent:
         self.training_strategy_fn = lambda: EGreedyExpStrategy(init_epsilon=config.strategy.init_epsilon,
                                                        min_epsilon=config.strategy.min_epsilon,
                                                        decay_steps=config.strategy.decay_steps,
-                                                       net_type=config.network.net_type)
-        self.evaluation_strategy_fn = lambda: GreedyStrategy(net_type=config.network.net_type)
+                                                       type=config.network.type)
+        self.evaluation_strategy_fn = lambda: GreedyStrategy(type=config.network.type)
         self.n_warmup_batches = config.train.n_warmup_batches
         self.update_target_every_steps = config.train.update_target_every_steps
         self.tau = 1.0
 
+        self.is_transformer = config.network.type in ['transformer', 'mtq']
+        self.is_linear = config.network.type in ['fcq', 'dueling_fcq']
+        self.is_lstm = config.network.type in ['lstm']
         self.__logger = logger
 
     def optimize_model(self):
         raise NotImplementedError
 
-    def interaction_step(self):
-        raise NotImplementedError
+    def interaction_step(self, state, env, hidden_state=None, cell_state=None):
+        if self.is_transformer:
+            action, hidden_state = self.training_strategy.select_action(self.online_model, state, hidden_state)
+        elif self.is_linear:
+            action = self.training_strategy.select_action(self.online_model, state)
+        elif self.is_lstm:
+            action, hidden_state, cell_state = self.training_strategy.select_action(self.online_model, state, hidden_state, cell_state)
+        new_state, reward, terminated, truncated, info = env.step(action)
+        is_failure = terminated
+        is_terminal = terminated or truncated
+        experience = (state, action, reward, new_state, float(is_failure))
+        self.replay_buffer.push(experience)
+        self.episode_reward[-1] += reward
+        self.episode_timestep[-1] += 1
+        self.episode_exploration[-1] += int(self.training_strategy.exploratory_action_taken)
+        
+        if self.is_transformer:
+            return new_state, is_terminal, hidden_state
+        elif self.is_linear:
+            return new_state, is_terminal
+        elif self.is_lstm:
+            return new_state, is_terminal, hidden_state, cell_state
     
     def update_network(self, tau=None):
         tau = self.tau if tau is None else tau
@@ -50,7 +73,7 @@ class BaseAgent:
 
     def train(self, make_env_fn, make_env_kargs, seed, gamma, 
               max_minutes, max_episodes, goal_mean_100_reward):
-        training_start, last_debug_time = time.time(), float('-inf')
+        training_start = time.time()
 
         self.checkpoint_dir = tempfile.mkdtemp()
         self.make_env_fn = make_env_fn
@@ -91,8 +114,14 @@ class BaseAgent:
             self.episode_timestep.append(0.0)
             self.episode_exploration.append(0.0)
 
+            hidden_state, cell_state = None, None
             for step in count():
-                state, is_terminal = self.interaction_step(state, env)
+                if self.is_transformer:
+                    state, is_terminal, hidden_state = self.interaction_step(state, env, hidden_state)
+                elif self.is_linear:
+                    state, is_terminal = self.interaction_step(state, env)
+                elif self.is_lstm:
+                    state, is_terminal, hidden_state, cell_state = self.interaction_step(state, env, hidden_state, cell_state)
                 
                 min_samples = self.replay_buffer.batch_size * self.n_warmup_batches
                 if len(self.replay_buffer) > min_samples:
@@ -167,8 +196,25 @@ class BaseAgent:
         self.get_cleaned_checkpoints()
         return result, final_eval_score, training_time, wallclock_time
     
-    def evaluate(self):
-        raise NotImplementedError
+    def evaluate(self, eval_policy_model, eval_env, n_episodes=1):
+        rs = []
+        for _ in range(n_episodes):
+            s, _ = eval_env.reset()
+            d = False
+            rs.append(0)
+            h, c = None, None
+            for _ in count():
+                if self.is_transformer:
+                    a, h = self.evaluation_strategy.select_action(eval_policy_model, s, h)
+                elif self.is_linear:
+                    a = self.evaluation_strategy.select_action(eval_policy_model, s)
+                elif self.is_lstm:
+                    a, h, c = self.evaluation_strategy.select_action(eval_policy_model, s, h, c)
+                s, r, terminated, truncated, _ = eval_env.step(a)
+                d = terminated or truncated
+                rs[-1] += r
+                if d: break
+        return np.mean(rs), np.std(rs)
 
     def get_cleaned_checkpoints(self, n_checkpoints=5):
         try: 

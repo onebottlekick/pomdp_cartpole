@@ -12,25 +12,19 @@ optimizer_dict = {
 }
 
 
-def beep():
-    os.system("printf '\a'")
-
-
-def save_results(results, algorithm_name, mdp, root='results', seed='', total=False):
-    root = os.path.join(root, mdp, algorithm_name)
-    os.makedirs(root, exist_ok=True)
+def save_results(results, config, seed='', total=False):
+    root = os.path.join('experiments', config.experiment.name, 'results')
     if total:
-        path = os.path.join(root, f'{algorithm_name}_total.npy')
+        path = os.path.join(root, f'{config.experiment.name}_total.npy')
     else:
-        path = os.path.join(root, f'{algorithm_name}_seed{seed}.npy')
+        path = os.path.join(root, f'{config.experiment.name}_seed{seed}.npy')
     np.save(path, results)
     
     
-def save_weights(model, algorithm_name, mdp, root='weights', seed='', best=False):
-    root = os.path.join(root, mdp, algorithm_name)
-    os.makedirs(root, exist_ok=True)
+def save_weights(model, config, seed='', best=False):
+    root = os.path.join('experiments', config.experiment.name, 'weights')
     if best:
-        path = os.path.join(root, f'{algorithm_name}_best.pth')
+        path = os.path.join(root, f'{config.experiment.name}_best.pth')
     else:
-        path = os.path.join(root, f'{algorithm_name}_seed{seed}.pth')
+        path = os.path.join(root, f'{config.experiment.name}_seed{seed}.pth')
     torch.save(model.state_dict(), path)

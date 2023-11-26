@@ -3,7 +3,7 @@ import argparse
 import yaml
 
 
-def load_config_form_yaml(path):
+def load_config_from_yaml(path):
     with open(path) as f:
         config = yaml.safe_load(f)
     return config
@@ -17,5 +17,5 @@ def config_to_namespace(config):
 
 
 def load_config(path):
-    config = load_config_form_yaml(path)
+    config = load_config_from_yaml(path)
     return config_to_namespace(config)

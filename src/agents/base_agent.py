@@ -93,7 +93,7 @@ class BaseAgent:
         
         self.target_model = self.value_model_fn(nS, nA)
         self.online_model = self.value_model_fn(nS, nA)
-        self.update_network()
+        self.update_network(tau=1.0)
 
         self.value_optimizer = self.value_optimizer_fn(self.online_model, 
                                                        self.value_optimizer_lr)

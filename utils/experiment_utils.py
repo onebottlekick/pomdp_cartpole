@@ -7,11 +7,11 @@ import torch
 from utils.env_utils import get_make_env_fn
 
 
-def load_results(algorithm_name, mdp, root='results', seed=None):
+def load_results(experiment_name, seed=None):
     if seed is not None:
-        path = os.path.join(root, mdp, algorithm_name, algorithm_name+'_seed'+str(seed)+'.npy')
+        path = os.path.join('experiments', experiment_name, 'results', experiment_name+'_seed'+str(seed)+'.npy')
     else:
-        path = os.path.join(root, mdp, algorithm_name, algorithm_name+'_total.npy')
+        path = os.path.join('experiments', experiment_name, 'results', experiment_name+'_total.npy')
     
     results = np.load(path)
     
@@ -55,12 +55,12 @@ def load_results(algorithm_name, mdp, root='results', seed=None):
     return result_dict
 
 
-def plot_results(algorithm_name, mdp, kind, seeds=None, color='b', title=None, save=False, save_name=None, root='results'):
+def plot_results(experiment_name, kind, seeds=None, color='b', title=None, save=False, save_name=None):
     plt.style.use('seaborn-darkgrid')
     
     if seeds is not None:
         for seed in seeds:
-            results = load_results(algorithm_name, mdp, seed=seed)
+            results = load_results(experiment_name, seed=seed)
             results = {
                       'total_steps': results[0],
                       'train_rewards': results[1],
@@ -73,7 +73,7 @@ def plot_results(algorithm_name, mdp, kind, seeds=None, color='b', title=None, s
         plt.legend(loc='lower right')
     
     else:
-        results = load_results(algorithm_name, mdp, root)
+        results = load_results(experiment_name)
 
         max_, min_, mean_, x = results[kind]['max'], results[kind]['min'], results[kind]['mean'], results['x']
 
@@ -87,12 +87,12 @@ def plot_results(algorithm_name, mdp, kind, seeds=None, color='b', title=None, s
         plt.title(title)
     
     if save:
-        save_dir = os.path.join('train', root, 'figure')
+        save_dir = os.path.join('experiments', experiment_name, 'figures')
         os.makedirs(save_dir, exist_ok=True)
         if save_name is not None:
             save_name = os.path.join(save_dir, save_name + '.png')
         else:
-            save_name = os.path.join(save_dir, algorithm_name + '_' + kind + '.png')
+            save_name = os.path.join(save_dir, experiment_name + '_' + kind + '.png')
         plt.savefig(save_name)
         plt.close()
         
@@ -101,22 +101,21 @@ def plot_results(algorithm_name, mdp, kind, seeds=None, color='b', title=None, s
         plt.close()
 
 
-def plot_states(algorithm, n_episodes=100, seed=None, render=False):
+def plot_states(config_path, n_episodes=100, seed=None, render=False):
     import os
     
     from .agent_utils import get_agent
     from .config_utils import load_config
     
-    config_path = f'configs/{algorithm}.yml'
     config = load_config(config_path)
     
-    agent = get_agent(algorithm)(config)
+    agent = get_agent(config.agent.type)(config)
     
     env_fn, env_kwargs = get_make_env_fn(version=config.env.version, mdp=config.env.mdp, seed=seed, render=render)
     env = env_fn(**env_kwargs)
     
     model = agent.value_model_fn(env.n_observations, env.n_actions)
-    network_ckpt = os.path.join('weights', config.env.mdp, algorithm, f'{algorithm}_best.pth')
+    network_ckpt = os.path.join('experiments', config.experiment.name, 'weights', f'{config.experiment.name}_best.pth')
     ckpt = torch.load(network_ckpt, map_location=model.device)
     model.load_state_dict(ckpt)
     model.eval()

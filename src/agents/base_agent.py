@@ -152,6 +152,7 @@ class BaseAgent:
             std_100_reward = np.std(self.episode_reward[-100:])
             mean_100_eval_score = np.mean(self.evaluation_scores[-100:])
             std_100_eval_score = np.std(self.evaluation_scores[-100:])
+            cur_eval_score = self.evaluation_scores[-1]
             lst_100_exp_rat = np.array(
                 self.episode_exploration[-100:])/np.array(self.episode_timestep[-100:])
             mean_100_exp_rat = np.mean(lst_100_exp_rat)
@@ -173,11 +174,12 @@ class BaseAgent:
             debug_message += 'ar 10 {:05.1f}\u00B1{:05.1f}, '
             debug_message += '100 {:05.1f}\u00B1{:05.1f}, '
             debug_message += 'ex 100 {:02.1f}\u00B1{:02.1f}, '
-            debug_message += 'ev {:05.1f}\u00B1{:05.1f}'
+            debug_message += 'ev {:05.1f}\u00B1{:05.1f} '
+            debug_message += 'cur_ev {:05.1f}'
             debug_message = debug_message.format(
                 elapsed_str, episode-1, total_step, mean_10_reward, std_10_reward, 
                 mean_100_reward, std_100_reward, mean_100_exp_rat, std_100_exp_rat,
-                mean_100_eval_score, std_100_eval_score)
+                mean_100_eval_score, std_100_eval_score, cur_eval_score)
             self.__logger.info(debug_message)
             
             if training_is_over:

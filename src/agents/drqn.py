@@ -4,6 +4,7 @@ from src.agents.base_agent import BaseAgent
 class DRQNAgent(BaseAgent):
     def __init__(self, config, logger):
         super().__init__(config, logger)
+        self.tau = float(config.train.tau)
 
     def optimize_model(self, experiences):
         states, actions, rewards, next_states, is_terminals = experiences

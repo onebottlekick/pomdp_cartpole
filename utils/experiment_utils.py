@@ -55,7 +55,7 @@ def load_results(experiment_name, seed=None):
     return result_dict
 
 
-def plot_results(experiment_name, kind, seeds=None, color='b', title=None, save=False, save_name=None):
+def plot_results(experiment_name, kind, idx=None, seeds=None, legend_loc='lower right', color='b', title=None, save=False, save_name=None):
     plt.style.use('seaborn-darkgrid')
     
     if seeds is not None:
@@ -68,9 +68,9 @@ def plot_results(experiment_name, kind, seeds=None, color='b', title=None, save=
                       'training_time': results[3],
                       'wallclock_elapsed': results[4]
                       }[kind]
-            
-            plt.plot(results, linewidth=1.0, label=f'seed: {seed}')
-        plt.legend(loc='lower right')
+            idxes = range(idx if idx is not None else len(results))
+            plt.plot(results[idxes], linewidth=1.0, label=f'seed: {seed}')
+        plt.legend(loc=legend_loc)
     
     else:
         results = load_results(experiment_name)
@@ -101,7 +101,7 @@ def plot_results(experiment_name, kind, seeds=None, color='b', title=None, save=
         plt.close()
 
 
-def plot_states(config_path, n_episodes=100, seed=None, render=False):
+def plot_states(config_path, ckpt_path=None, n_episodes=100, seed=None, render=False):
     import os
     
     from .agent_utils import get_agent
@@ -109,13 +109,13 @@ def plot_states(config_path, n_episodes=100, seed=None, render=False):
     
     config = load_config(config_path)
     
-    agent = get_agent(config.agent.type)(config)
+    agent = get_agent(config.agent.type)(config, None)
     
     env_fn, env_kwargs = get_make_env_fn(version=config.env.version, mdp=config.env.mdp, seed=seed, render=render)
     env = env_fn(**env_kwargs)
     
     model = agent.value_model_fn(env.n_observations, env.n_actions)
-    network_ckpt = os.path.join('experiments', config.experiment.name, 'weights', f'{config.experiment.name}_best.pth')
+    network_ckpt = os.path.join('experiments', config.experiment.name, 'weights', f'{config.experiment.name}_best.pth') if ckpt_path is None else ckpt_path
     ckpt = torch.load(network_ckpt, map_location=model.device)
     model.load_state_dict(ckpt)
     model.eval()

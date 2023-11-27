@@ -8,7 +8,7 @@ class DuelingDDQNAgent(BaseAgent):
     def __init__(self, config, logger):
         super().__init__(config, logger)
         self.max_gradient_norm = float(config.train.max_gradient_norm)
-        self.tau = config.train.tau
+        self.tau = float(config.train.tau)
 
     def optimize_model(self, experiences):
         states, actions, rewards, next_states, is_terminals = experiences

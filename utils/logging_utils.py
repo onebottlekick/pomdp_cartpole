@@ -2,8 +2,6 @@ import logging
 import os
 import shutil
 
-import yaml
-
 from utils.config_utils import load_config
 
 

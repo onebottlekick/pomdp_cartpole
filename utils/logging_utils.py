@@ -38,7 +38,10 @@ def mkExpDir(config_path, reset=False):
     os.makedirs(result_root, exist_ok=True)
     os.makedirs(weights_root, exist_ok=True)
     
-    shutil.copyfile(config_path, os.path.join(exp_root, f'{config.experiment.name}.yml'))
+    with open(config_path, 'r') as c:
+        with open(os.path.join(exp_root, f'{config.experiment.name}.yml'), 'w') as f:
+            for line in c.readlines():
+                f.write(line)
 
     _logger = Logger(log_file_name=os.path.join(exp_root, config.experiment.name+'.log'),
         logger_name=config.experiment.name).get_log()

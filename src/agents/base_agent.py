@@ -8,11 +8,10 @@ from itertools import count
 import numpy as np
 import torch
 
-from src.buffer.replay_buffer import ReplayBuffer
-from utils.buffer_utils import Transition
+from src.buffer.replay_buffer import ReplayBuffer, Transition
+from utils.network_utils import get_network
 from utils.seed_utils import seed_everything
 from utils.strategy import EGreedyExpStrategy, GreedyStrategy
-from utils.network_utils import get_network
 from utils.train_utils import optimizer_dict
 
 

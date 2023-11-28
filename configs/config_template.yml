@@ -1,0 +1,39 @@
+# Experiment configuration
+experiment:
+  name: experiment_name
+
+# Training configuration
+train:
+  seeds: [1, 2, 3, 4, 5]
+  batch_size: 1
+  learning_rate: 1e-3
+  optimizer: #[adam, rmsprop, sgd]
+  n_warmup_batches: 1
+  update_target_every_steps: 1
+  random_sample: #[True, False]
+
+# Network configuration
+network:
+  type: #[fcq, dueling_fcq, lstm, mtq]
+  in_dim: 1
+  num_layers: 1
+
+# Environment configuration
+env:
+  version: #[v0, v1]
+  mdp: #[FOMDP, POMDP]
+  render: #[True, False]
+
+# Agent configuration
+agent:
+  type: #[dqn, ddqn, dueling_ddqn, drqn, mtqn]
+  gamma: 1.0
+  max_minutes: 1
+  max_episodes: 1
+  goal_mean_100_reward: 1
+
+# Strategy configuration
+strategy:
+  init_epsilon: 1.0
+  min_epsilon: 0.0
+  decay_steps: 1

@@ -9,7 +9,7 @@ class GreedyStrategy():
 
     def select_action(self, model, state=None, hidden_state=None, cell_state=None):
         with torch.no_grad():
-            if self.type in ['transformer', 'mtq']:
+            if self.type in ['mtq']:
                 q_values, hidden_state = model(state, hidden_state)
                 q_values = q_values.cpu().detach().data.numpy().squeeze()
                 action = np.argmax(q_values)
@@ -36,7 +36,7 @@ class EGreedyStrategy():
     def select_action(self, model, state=None, hidden_state=None, cell_state=None):
         self.exploratory_action_taken = False
         with torch.no_grad():
-            if self.type in ['transformer', 'mtq']:
+            if self.type in ['mtq']:
                 q_values, hidden_state = model(state, hidden_state)
                 q_values = q_values.cpu().detach().data.numpy().squeeze()
                 action = np.argmax(q_values) if np.random.rand() > self.epsilon else np.random.randint(len(q_values))
@@ -77,7 +77,7 @@ class EGreedyExpStrategy():
     def select_action(self, model, state, hidden_state=None, cell_state=None):
         self.exploratory_action_taken = False
         with torch.no_grad():
-            if self.type in ['transformer', 'mtq']:
+            if self.type in ['mtq']:
                 q_values, hidden_state = model(state, hidden_state)
                 q_values = q_values.cpu().detach().data.numpy().squeeze()
                 action = np.argmax(q_values) if np.random.rand() > self.epsilon else np.random.randint(len(q_values))

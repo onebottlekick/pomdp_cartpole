@@ -31,7 +31,7 @@ class BaseAgent:
         self.update_target_every_steps = config.train.update_target_every_steps
         self.tau = 1.0
 
-        self.is_transformer = config.network.type in ['transformer', 'mtq']
+        self.is_transformer = config.network.type in ['mtq']
         self.is_linear = config.network.type in ['fcq', 'dueling_fcq']
         self.is_lstm = config.network.type in ['lstm']
         self.__logger = logger

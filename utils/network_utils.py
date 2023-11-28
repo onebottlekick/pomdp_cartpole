@@ -1,6 +1,6 @@
 from src.networks.linear import FCQ, FCDuelingQ
 from src.networks.lstm import LSTMQ
-from src.networks.transformer import TransformerDuelingQ, MemoryTransformerQ
+from src.networks.transformer import MemoryTransformerQ
 
 
 def get_network(config):
@@ -14,14 +14,7 @@ def get_network(config):
                                                     num_layers=config.network.num_layers,
                                                     n_observations=nS,
                                                     n_actions=nA),
-        
-        'transformer': lambda nS, nA: TransformerDuelingQ(memory_len=config.network.memory_len,
-                                                            dim=config.network.in_dim,
-                                                            num_layers=config.network.num_layers,
-                                                            num_heads=config.network.num_heads,
-                                                            n_observations=nS,
-                                                            n_actions=nA),
-        
+                
         'lstm': lambda nS, nA: LSTMQ(dim=config.network.in_dim,
                                         num_layers=config.network.num_layers,
                                         n_observations=nS,

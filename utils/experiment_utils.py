@@ -4,7 +4,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
+from utils.agent_utils import get_agent
+from utils.config_utils import load_config
 from utils.env_utils import get_make_env_fn
+
+fig_size = (12, 8)
+font_size = 20
+dpi = 300
 
 
 def load_results(experiment_name, seed=None):
@@ -17,6 +23,9 @@ def load_results(experiment_name, seed=None):
     
     if seed is not None:
         return results.T
+    
+    # TODO: constant to variable
+    results[np.isnan(results)] = 195
     
     max_t, max_r, max_s, max_sec, max_rt = np.max(results, axis=0).T
     min_t, min_r, min_s, min_sec, min_rt = np.min(results, axis=0).T
@@ -59,6 +68,8 @@ def plot_results(experiment_name, kind, idx=None, seeds=None, legend_loc='lower 
     plt.style.use('seaborn-darkgrid')
     
     if seeds is not None:
+        plt.figure(figsize=fig_size, dpi=dpi)
+        plt.rc('font', size=font_size)
         for seed in seeds:
             results = load_results(experiment_name, seed=seed)
             results = {
@@ -70,18 +81,24 @@ def plot_results(experiment_name, kind, idx=None, seeds=None, legend_loc='lower 
                       }[kind]
             idxes = range(idx if idx is not None else len(results))
             plt.plot(results[idxes], linewidth=1.0, label=f'seed: {seed}')
-        plt.legend(loc=legend_loc)
+            plt.xlabel('Episodes')
+            if kind == 'eval_scores':
+                plt.ylabel('Evaluation Score')
+        plt.legend(loc=legend_loc, fontsize=15)
     
     else:
         results = load_results(experiment_name)
+        
+        max_, min_, mean_, x = results[kind]['max'][:idx], results[kind]['min'][:idx], results[kind]['mean'][:idx], results['x'][:idx]
 
-        max_, min_, mean_, x = results[kind]['max'], results[kind]['min'], results[kind]['mean'], results['x']
-
+        plt.figure(figsize=fig_size, dpi=dpi)
+        plt.rc('font', size=font_size)
         plt.xlabel('Episodes')
-        plt.plot(max_, color, linewidth=1.0)
-        plt.plot(min_, color, linewidth=1.0)
-        plt.plot(mean_, color+'--', linewidth=2.0)
-        plt.fill_between(x, min_, max_, facecolor=color, alpha=0.3)
+        if kind == 'eval_scores':
+                plt.ylabel('Evaluation Score')
+        plt.plot(mean_, color, linewidth=2.0, label='mean')
+        plt.legend(loc=legend_loc, fontsize=15)
+        plt.fill_between(x, min_, max_, facecolor=color, alpha=0.3, linewidth=0.0)
     
     if title is not None:
         plt.title(title)
@@ -99,15 +116,15 @@ def plot_results(experiment_name, kind, idx=None, seeds=None, legend_loc='lower 
     else:
         plt.show()
         plt.close()
-
-
-def plot_states(config_path, ckpt_path=None, n_episodes=100, seed=None, render=False):
-    import os
     
-    from .agent_utils import get_agent
-    from .config_utils import load_config
+    if seeds is None:
+        return max_, mean_, min_, x
     
+    
+def generate_states(config_path, n_episodes=100, seed=None, render=False):
     config = load_config(config_path)
+    save_root = os.path.join('experiments', config.experiment.name, 'states')
+    os.makedirs(save_root, exist_ok=True)
     
     agent = get_agent(config.agent.type)(config, None)
     
@@ -115,7 +132,7 @@ def plot_states(config_path, ckpt_path=None, n_episodes=100, seed=None, render=F
     env = env_fn(**env_kwargs)
     
     model = agent.value_model_fn(env.n_observations, env.n_actions)
-    network_ckpt = os.path.join('experiments', config.experiment.name, 'weights', f'{config.experiment.name}_best.pth') if ckpt_path is None else ckpt_path
+    network_ckpt = os.path.join('experiments', config.experiment.name, 'weights', f'{config.experiment.name}_best.pth')
     ckpt = torch.load(network_ckpt, map_location=model.device)
     model.load_state_dict(ckpt)
     model.eval()
@@ -150,14 +167,46 @@ def plot_states(config_path, ckpt_path=None, n_episodes=100, seed=None, render=F
     else:
         x = np.array(states)[:, 0]
         a = np.array(states)[:, 2]
+        
+    np.save(os.path.join(save_root, 'cart_position.npy'), x)
+    np.save(os.path.join(save_root, 'pole_angle.npy'), a)
+
+
+def plot_cart_position(experiment_name):
+    x = np.load(os.path.join('experiments', experiment_name, 'states', 'cart_position.npy'))
     
     plt.style.use('seaborn-darkgrid')
+    
+    plt.figure(figsize=fig_size, dpi=dpi)
+    plt.rc('font', size=font_size)
     plt.plot(x)
     plt.xlabel('Steps')
     plt.ylabel('Cart Position')
     plt.show()
+
+    plt.figure(figsize=fig_size, dpi=dpi)
+    plt.rc('font', size=font_size)
+    h = plt.hist(x, bins=1000, color='red', alpha=0.3)
+    plt.ylabel('Frequency')
+    plt.xlabel('Cart Position')
+    plt.show()
     
+    
+def plot_pole_angle(experiment_name):
+    a = np.load(os.path.join('experiments', experiment_name, 'states', 'pole_angle.npy'))
+    
+    plt.style.use('seaborn-darkgrid')
+    
+    plt.figure(figsize=fig_size, dpi=dpi)
+    plt.rc('font', size=font_size)
     plt.plot(a)
     plt.xlabel('Steps')
-    plt.ylabel('Pole Angle')
+    plt.ylabel('Pole Angle(rad)')
+    plt.show()
+    
+    plt.figure(figsize=fig_size, dpi=dpi)
+    plt.rc('font', size=font_size)
+    h = plt.hist(a, bins=1000, color='red', alpha=0.3)
+    plt.ylabel('Frequency')
+    plt.xlabel('Pole Angle(rad)')
     plt.show()

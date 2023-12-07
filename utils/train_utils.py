@@ -38,3 +38,9 @@ def save_states(states, config, seed):
     root = os.path.join('experiments', config.experiment.name, 'states')
     path = os.path.join(root, f'{config.experiment.name}_seed{seed}.npy')
     np.save(path, states)
+    
+
+def save_eval_states(eval_states, config, seed):
+    root = os.path.join('experiments', config.experiment.name, 'states')
+    path = os.path.join(root, f'{config.experiment.name}_eval_seed{seed}.npy')
+    np.save(path, eval_states)

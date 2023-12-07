@@ -5,7 +5,7 @@ import numpy as np
 from utils.agent_utils import get_agent
 from utils.env_utils import get_make_env_fn
 from utils.logging_utils import mkExpDir
-from utils.train_utils import save_results, save_weights, save_states
+from utils.train_utils import save_results, save_weights, save_states, save_eval_states
 
 
 def main(algorithm, config, logger):
@@ -16,10 +16,11 @@ def main(algorithm, config, logger):
         agent = get_agent(algorithm)(config, logger)
 
         make_env_fn, make_env_kargs = get_make_env_fn(version=config.env.version, mdp=config.env.mdp, seed=seed, render=config.env.render)
-        result, final_eval_score, training_time, wallclock_time, states = agent.train(
+        result, final_eval_score, training_time, wallclock_time, states, eval_states = agent.train(
             make_env_fn, make_env_kargs, seed, config.agent.gamma, config.agent.max_minutes, config.agent.max_episodes, config.agent.goal_mean_100_reward)
         save_results(np.array(result), config, seed=seed)
         save_states(states, config, seed=seed)
+        save_eval_states(eval_states, config, seed=seed)
         exp_results.append(result)
         save_weights(agent.online_model, config, seed=seed)
         if final_eval_score > best_eval_score:

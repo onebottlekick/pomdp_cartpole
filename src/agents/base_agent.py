@@ -104,6 +104,7 @@ class BaseAgent:
         result = np.empty((max_episodes, 5))
         result[:] = np.nan
         states = []
+        eval_states = []
         training_time = 0
         for episode in range(1, max_episodes + 1):
             episode_start = time.time()
@@ -144,7 +145,8 @@ class BaseAgent:
             episode_elapsed = time.time() - episode_start
             self.episode_seconds.append(episode_elapsed)
             training_time += episode_elapsed
-            evaluation_score, _ = self.evaluate(self.online_model, env)
+            evaluation_score, _, eval_state = self.evaluate(self.online_model, env, return_states=True)
+            eval_states.append(eval_state)
             self.save_checkpoint(episode-1, self.online_model)
             
             total_step = int(np.sum(self.episode_timestep))
@@ -200,12 +202,14 @@ class BaseAgent:
                   final_eval_score, score_std, training_time, wallclock_time))
         env.close() ; del env
         self.get_cleaned_checkpoints()
-        return result, final_eval_score, training_time, wallclock_time, states
+        return result, final_eval_score, training_time, wallclock_time, states, np.vstack(eval_states)
     
-    def evaluate(self, eval_policy_model, eval_env, n_episodes=1):
+    def evaluate(self, eval_policy_model, eval_env, n_episodes=1, return_states=False):
         rs = []
+        states = []
         for _ in range(n_episodes):
             s, _ = eval_env.reset()
+            states.append(s)
             d = False
             rs.append(0)
             h, c = None, None
@@ -217,9 +221,12 @@ class BaseAgent:
                 elif self.is_lstm:
                     a, h, c = self.evaluation_strategy.select_action(eval_policy_model, s, h, c)
                 s, r, terminated, truncated, _ = eval_env.step(a)
+                states.append(s)
                 d = terminated or truncated
                 rs[-1] += r
                 if d: break
+            if return_states:
+                return np.mean(rs), np.std(rs), np.array(states)
         return np.mean(rs), np.std(rs)
 
     def get_cleaned_checkpoints(self, n_checkpoints=5):

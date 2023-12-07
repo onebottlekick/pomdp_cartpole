@@ -13,6 +13,8 @@ optimizer_dict = {
 
 
 def save_results(results, config, seed='', total=False):
+    if not isinstance(results, np.ndarray):
+        results = np.array(results)
     root = os.path.join('experiments', config.experiment.name, 'results')
     if total:
         path = os.path.join(root, f'{config.experiment.name}_total.npy')
@@ -28,3 +30,11 @@ def save_weights(model, config, seed='', best=False):
     else:
         path = os.path.join(root, f'{config.experiment.name}_seed{seed}.pth')
     torch.save(model.state_dict(), path)
+    
+def save_states(states, config, seed):
+    if not isinstance(states, np.ndarray):
+        states = np.array(states)
+        
+    root = os.path.join('experiments', config.experiment.name, 'states')
+    path = os.path.join(root, f'{config.experiment.name}_seed{seed}.npy')
+    np.save(path, states)

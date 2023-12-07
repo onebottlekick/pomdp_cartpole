@@ -28,19 +28,21 @@ def mkExpDir(config_path, reset=False):
     
     if os.path.exists(exp_root):
         if reset:
-            shutil.rmtree(exp_root)   
+            shutil.rmtree(exp_root)
         
     result_root = os.path.join(exp_root, 'results')
     weights_root = os.path.join(exp_root, 'weights')
+    states_root = os.path.join(exp_root, 'states')
     os.makedirs(exp_root, exist_ok=True)
     os.makedirs(result_root, exist_ok=True)
     os.makedirs(weights_root, exist_ok=True)
+    os.makedirs(states_root, exist_ok=True)
     
     with open(config_path, 'r') as c:
         with open(os.path.join(exp_root, f'{config.experiment.name}.yml'), 'w') as f:
             for line in c.readlines():
                 f.write(line)
-
+    
     _logger = Logger(log_file_name=os.path.join(exp_root, config.experiment.name+'.log'),
         logger_name=config.experiment.name).get_log()
 

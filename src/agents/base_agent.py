@@ -103,11 +103,13 @@ class BaseAgent:
                     
         result = np.empty((max_episodes, 5))
         result[:] = np.nan
+        states = []
         training_time = 0
         for episode in range(1, max_episodes + 1):
             episode_start = time.time()
             
             state, _ = env.reset(seed=self.seed)
+            states.append(state)
             is_terminal = False
             self.episode_reward.append(0.0)
             self.episode_timestep.append(0.0)
@@ -117,10 +119,13 @@ class BaseAgent:
             for step in count():
                 if self.is_transformer:
                     state, is_terminal, hidden_state = self.interaction_step(state, env, hidden_state)
+                    states.append(state)
                 elif self.is_linear:
                     state, is_terminal = self.interaction_step(state, env)
+                    states.append(state)
                 elif self.is_lstm:
                     state, is_terminal, hidden_state, cell_state = self.interaction_step(state, env, hidden_state, cell_state)
+                    states.append(state)
                 
                 min_samples = self.replay_buffer.batch_size * self.n_warmup_batches
                 if len(self.replay_buffer) > min_samples:
@@ -195,7 +200,7 @@ class BaseAgent:
                   final_eval_score, score_std, training_time, wallclock_time))
         env.close() ; del env
         self.get_cleaned_checkpoints()
-        return result, final_eval_score, training_time, wallclock_time
+        return result, final_eval_score, training_time, wallclock_time, states
     
     def evaluate(self, eval_policy_model, eval_env, n_episodes=1):
         rs = []
